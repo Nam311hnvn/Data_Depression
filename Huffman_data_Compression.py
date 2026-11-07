@@ -82,7 +82,7 @@ def compress(input_file, output_file):
 
     with open(output_file, "wb") as f:
         # Ghi thông tin nhận diện file
-        f.write(b"HUF2")
+        f.write(b"HUF1")
         f.write(len(freq).to_bytes(2, "big"))
 
         # Ghi bảng tần suất
@@ -135,12 +135,12 @@ def decompress(input_file, output_file):
         freq = {}
         for _ in range(k):
             symbol = f.read(1)
-            count = f.read(8)
 
-            if len(symbol) != 1 or len(count) != 8:
+            if len(symbol) != 1:
                 raise ValueError("Bang tan suat bi thieu!")
 
-            freq[symbol[0]] = int.from_bytes(count, "big")
+            count = read_varint(f)
+            freq[symbol[0]] = count
 
         # Đọc phần dữ liệu đã nén
         encoded = f.read()
@@ -204,24 +204,13 @@ def decompress(input_file, output_file):
 if __name__ == "__main__":
 
 #Gọi hàm nén văn bản
-    # Tep van ban ban dau
-    input_file = "thu_dieu.txt"
-
-    # # Tep duoc tao ra sau khi nen Huffman
-    output_file = "thu_dieu_2.compress"
-
     # # Goi ham nen da viet o phia tren
-    compress(input_file, output_file)
+    # compress("thu_dieu.txt", "thu_dieu.compress")
 
     print("Chuong trinh da chay xong!")
 
-#Gọi hàm giải nén văn bản
-    # # Tên tệp đã được nén
-    # compressed_input = "test_file.compressed"
-
-    # # Tên tệp sẽ được giải nén
-    # decompressed_output = "test_file_decompressed.txt"
+#Gọi hàm giải nén văn bả
 
     # # Gọi hàm giải nén
-    # decompress(compressed_input, decompressed_output)
-    # print("Chuong trinh da chay xong!")
+    decompress("thu_dieu.compress", "thu_dieu_decompressed.txt")
+    print("Chuong trinh da chay xong!")
