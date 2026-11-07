@@ -48,33 +48,68 @@ def build_codes(node, code="", result=None):
     return result
 
 
+def write_varint(f, n):
+    while n >= 128:
+        f.write(bytes([(n & 0x7F) | 0x80]))
+        n >>= 7
+    f.write(bytes([n]))
+
+
+# Đọc lại tần suất đã lưu
+def read_varint(f):
+    n = 0
+    shift = 0
+
+    while True:
+        b = f.read(1)
+
+        if not b:
+            raise ValueError("Du lieu bi thieu!")
+
+        byte = b[0]
+        n |= (byte & 0x7F) << shift
+
+        if not (byte & 0x80):
+            return n
+
+        shift += 7
+
 # 4. Nén tệp: đếm tần suất, tạo mã, ghi bit vào tệp .huff.
 def compress(input_file, output_file):
-    data = Path(input_file).read_bytes()  # Đọc byte để hỗ trợ tiếng Việt UTF-8.
-    freq = Counter(data)                 # Đếm số lần mỗi byte xuất hiện.
+    data = Path(input_file).read_bytes()
+    freq = Counter(data)
     codes = build_codes(build_tree(freq))
 
     with open(output_file, "wb") as f:
-        # Phần đầu tệp giúp giải nén tái tạo lại đúng cây Huffman.
-        f.write(b"HUF1")  # Dấu nhận biết định dạng.
-        f.write(len(freq).to_bytes(2, "big"))  # Số byte khác nhau.
-        for symbol, count in sorted(freq.items()):
-            f.write(bytes([symbol]))           # Giá trị byte: 1 byte.
-            f.write(count.to_bytes(8, "big"))  # Tần suất: 8 byte.
+        # Ghi thông tin nhận diện file
+        f.write(b"HUF2")
+        f.write(len(freq).to_bytes(2, "big"))
 
+        # Ghi bảng tần suất
+        for symbol, count in sorted(freq.items()):
+            f.write(bytes([symbol]))
+            write_varint(f, count)
+
+        # Ghi dữ liệu đã mã hóa Huffman
         buffer, used = 0, 0
+
         for symbol in data:
             for bit in codes[symbol]:
-                buffer = (buffer << 1) | int(bit)  # Thêm 1 bit vào bộ đệm.
+                buffer = (buffer << 1) | int(bit)
                 used += 1
-                if used == 8:  # Gom đủ 8 bit thành 1 byte để ghi.
+
+                if used == 8:
                     f.write(bytes([buffer]))
                     buffer, used = 0, 0
-        if used:  # Các bit 0 cuối chỉ để đủ 8 bit.
+
+        # Ghi các bit còn lại
+        if used:
             f.write(bytes([buffer << (8 - used)]))
 
     print("Đã nén:", input_file, "->", output_file)
-    print("Kích thước:", len(data), "->", Path(output_file).stat().st_size, "byte")
+    print("Kích thước:", len(data), "->",
+          Path(output_file).stat().st_size, "byte")
+
 
 
 # 5. Giải nén tệp
@@ -170,23 +205,23 @@ if __name__ == "__main__":
 
 #Gọi hàm nén văn bản
     # Tep van ban ban dau
-    # input_file = "test_file.compressed"
+    input_file = "thu_dieu.txt"
 
     # # Tep duoc tao ra sau khi nen Huffman
-    # output_file = "test_file_decompressed.txt"
+    output_file = "thu_dieu_2.compress"
 
     # # Goi ham nen da viet o phia tren
-    # compress(input_file, output_file)
+    compress(input_file, output_file)
 
-    # print("Chuong trinh da chay xong!")
+    print("Chuong trinh da chay xong!")
 
 #Gọi hàm giải nén văn bản
-    # Tên tệp đã được nén
-    compressed_input = "test_file.compressed"
+    # # Tên tệp đã được nén
+    # compressed_input = "test_file.compressed"
 
-    # Tên tệp sẽ được giải nén
-    decompressed_output = "test_file_decompressed.txt"
+    # # Tên tệp sẽ được giải nén
+    # decompressed_output = "test_file_decompressed.txt"
 
-    # Gọi hàm giải nén
-    decompress(compressed_input, decompressed_output)
-    print("Chuong trinh da chay xong!")
+    # # Gọi hàm giải nén
+    # decompress(compressed_input, decompressed_output)
+    # print("Chuong trinh da chay xong!")
